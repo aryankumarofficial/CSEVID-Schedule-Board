@@ -2,11 +2,9 @@ import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Tabs } from "expo-router";
 import { NativeTabs, Icon, Label } from "expo-router/unstable-native-tabs";
 import { BlurView } from "expo-blur";
-import { SymbolView } from "expo-symbols";
-import { Platform, StyleSheet, useColorScheme, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "@/constants/colors";
 
 function NativeTabLayout() {
@@ -17,11 +15,11 @@ function NativeTabLayout() {
         <Label>Home</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="timetable">
-        <Icon sf={{ default: "calendar", selected: "calendar.badge.clock" }} />
+        <Icon sf={{ default: "calendar", selected: "calendar" }} />
         <Label>Timetable</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="settings">
-        <Icon sf={{ default: "slider.horizontal.3", selected: "slider.horizontal.3" }} />
+        <Icon sf={{ default: "square.and.pencil", selected: "square.and.pencil" }} />
         <Label>Manage</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
@@ -29,7 +27,6 @@ function NativeTabLayout() {
 }
 
 function ClassicTabLayout() {
-  const insets = useSafeAreaInsets();
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
 
@@ -59,36 +56,27 @@ function ClassicTabLayout() {
         name="index"
         options={{
           title: "Home",
-          tabBarIcon: ({ color, size }) =>
-            isIOS ? (
-              <SymbolView name="house.fill" tintColor={color} size={size} />
-            ) : (
-              <Ionicons name="home" color={color} size={size} />
-            ),
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="home" color={color} size={size} />
+          ),
         }}
       />
       <Tabs.Screen
         name="timetable"
         options={{
           title: "Timetable",
-          tabBarIcon: ({ color, size }) =>
-            isIOS ? (
-              <SymbolView name="calendar" tintColor={color} size={size} />
-            ) : (
-              <Ionicons name="calendar" color={color} size={size} />
-            ),
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="calendar-outline" color={color} size={size} />
+          ),
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: "Manage",
-          tabBarIcon: ({ color, size }) =>
-            isIOS ? (
-              <SymbolView name="slider.horizontal.3" tintColor={color} size={size} />
-            ) : (
-              <Ionicons name="options" color={color} size={size} />
-            ),
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="create-outline" color={color} size={size} />
+          ),
         }}
       />
     </Tabs>
@@ -96,8 +84,12 @@ function ClassicTabLayout() {
 }
 
 export default function TabLayout() {
-  if (isLiquidGlassAvailable()) {
-    return <NativeTabLayout />;
+  try {
+    if (isLiquidGlassAvailable()) {
+      return <NativeTabLayout />;
+    }
+  } catch {
+    // fallback to classic layout if liquid glass check fails
   }
   return <ClassicTabLayout />;
 }

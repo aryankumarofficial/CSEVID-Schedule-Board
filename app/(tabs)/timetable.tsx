@@ -35,78 +35,102 @@ function getDayIndex() {
   return map[d] ?? 0;
 }
 
-function LectureCell({ lecture }: { lecture: Lecture | null }) {
-  if (!lecture) {
-    return (
-      <View style={styles.emptyCell}>
-        <Text style={styles.emptyCellText}>—</Text>
-      </View>
-    );
-  }
-  const color = Colors.subjectColors[lecture.colorIndex % Colors.subjectColors.length];
-  return (
-    <View style={[styles.lectureCell, { backgroundColor: color + "22", borderColor: color + "55" }]}>
-      <Text style={[styles.cellCode, { color }]} numberOfLines={1}>{lecture.subjectCode}</Text>
-      {lecture.teacher ? (
-        <Text style={styles.cellTeacher} numberOfLines={1}>{lecture.teacher}</Text>
-      ) : null}
-    </View>
-  );
-}
-
-function DayView({ day }: { day: string }) {
+function DayView({ day, bottomPad }: { day: string; bottomPad: number }) {
   const { getLecturesForDay } = useTimetable();
   const slots = getLecturesForDay(day);
 
   return (
     <Animated.View entering={FadeIn.duration(300)} style={{ flex: 1 }}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingBottom: 20 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ gap: 10, paddingBottom: bottomPad }}
+      >
         {slots.map(({ slot, lecture }) => {
           if (slot.period === -1) {
             return (
               <View key="lunch" style={styles.lunchBreakRow}>
                 <Ionicons name="restaurant-outline" size={13} color={Colors.gold} />
-                <Text style={[styles.lunchLabel]}>Lunch Break  {formatTime(slot.start)} – {formatTime(slot.end)}</Text>
+                <Text style={styles.lunchLabel}>
+                  Lunch Break  {formatTime(slot.start)} – {formatTime(slot.end)}
+                </Text>
               </View>
             );
           }
+
+          const colorIndex = lecture?.colorIndex ?? 0;
           const color = lecture
-            ? Colors.subjectColors[lecture.colorIndex % Colors.subjectColors.length]
+            ? Colors.subjectColors[colorIndex % Colors.subjectColors.length]
             : Colors.border;
+
           return (
             <View key={slot.period} style={styles.periodRow}>
               <View style={styles.periodTimeCol}>
-                <Text style={[styles.periodNum, { color: Colors.textMuted }]}>P{slot.period}</Text>
-                <Text style={[styles.periodTime, { color: Colors.textMuted }]}>{formatTime(slot.start)}</Text>
-                <Text style={[styles.periodTime, { color: Colors.textMuted }]}>{formatTime(slot.end)}</Text>
+                <Text style={[styles.periodNum, { color: Colors.textMuted }]}>
+                  P{slot.period}
+                </Text>
+                <Text style={[styles.periodTime, { color: Colors.textMuted }]}>
+                  {formatTime(slot.start)}
+                </Text>
+                <Text style={[styles.periodTime, { color: Colors.textMuted }]}>
+                  {formatTime(slot.end)}
+                </Text>
               </View>
+
               {lecture ? (
-                <View style={[styles.dayLectureCard, { borderLeftColor: color, backgroundColor: color + "18" }]}>
+                <View
+                  style={[
+                    styles.dayLectureCard,
+                    { borderLeftColor: color, backgroundColor: color + "18" },
+                  ]}
+                >
                   <View style={styles.dayCardTop}>
-                    <Text style={[styles.daySubjectCode, { color }]}>{lecture.subjectCode}</Text>
+                    <Text style={[styles.daySubjectCode, { color }]}>
+                      {lecture.subjectCode}
+                    </Text>
                     <View style={[styles.dayBadge, { backgroundColor: color + "33" }]}>
-                      <Text style={[styles.dayBadgeText, { color }]}>{slot.label}</Text>
+                      <Text style={[styles.dayBadgeText, { color }]}>
+                        {slot.label}
+                      </Text>
                     </View>
                   </View>
                   <Text style={styles.daySubjectName}>{lecture.subject}</Text>
                   <View style={styles.dayMeta}>
-                    {lecture.teacher ? (
+                    {!!lecture.teacher && (
                       <View style={styles.dayMetaItem}>
-                        <Ionicons name="person-outline" size={11} color={Colors.textMuted} />
+                        <Ionicons
+                          name="person-outline"
+                          size={11}
+                          color={Colors.textMuted}
+                        />
                         <Text style={styles.dayMetaText}>{lecture.teacher}</Text>
                       </View>
-                    ) : null}
-                    {lecture.venue ? (
+                    )}
+                    {!!lecture.venue && (
                       <View style={styles.dayMetaItem}>
-                        <Ionicons name="location-outline" size={11} color={Colors.textMuted} />
+                        <Ionicons
+                          name="location-outline"
+                          size={11}
+                          color={Colors.textMuted}
+                        />
                         <Text style={styles.dayMetaText}>{lecture.venue}</Text>
                       </View>
-                    ) : null}
+                    )}
                   </View>
                 </View>
               ) : (
-                <View style={[styles.dayLectureCard, { borderLeftColor: Colors.border, backgroundColor: Colors.backgroundMid, opacity: 0.4 }]}>
-                  <Text style={[styles.daySubjectCode, { color: Colors.textMuted }]}>Free</Text>
+                <View
+                  style={[
+                    styles.dayLectureCard,
+                    {
+                      borderLeftColor: Colors.border,
+                      backgroundColor: Colors.backgroundMid,
+                      opacity: 0.4,
+                    },
+                  ]}
+                >
+                  <Text style={[styles.daySubjectCode, { color: Colors.textMuted }]}>
+                    Free
+                  </Text>
                   <Text style={styles.daySubjectName}>No lecture scheduled</Text>
                 </View>
               )}
@@ -120,13 +144,22 @@ function DayView({ day }: { day: string }) {
 
 export default function TimetableScreen() {
   const insets = useSafeAreaInsets();
-  const [selectedDay, setSelectedDay] = useState(() => Math.min(getDayIndex(), DAYS.length - 1));
+  const [selectedDay, setSelectedDay] = useState(() =>
+    Math.min(getDayIndex(), DAYS.length - 1)
+  );
 
   const webTopPad = Platform.OS === "web" ? 67 : 0;
   const webBottomPad = Platform.OS === "web" ? 34 : 0;
 
+  const bottomPad = insets.bottom + webBottomPad + 100;
+
   return (
-    <View style={[styles.container, { paddingTop: insets.top + webTopPad, paddingBottom: webBottomPad }]}>
+    <View
+      style={[
+        styles.container,
+        { paddingTop: insets.top + webTopPad },
+      ]}
+    >
       <Animated.View entering={FadeInDown.duration(400)} style={styles.header}>
         <Text style={styles.screenTitle}>Timetable</Text>
         <Text style={styles.screenSubtitle}>CSEVID  •  6th Semester</Text>
@@ -151,10 +184,22 @@ export default function TimetableScreen() {
                   isToday && !isSelected && styles.dayTabToday,
                 ]}
               >
-                <Text style={[styles.dayTabText, isSelected && styles.dayTabTextSelected]}>
+                <Text
+                  style={[
+                    styles.dayTabText,
+                    isSelected && styles.dayTabTextSelected,
+                  ]}
+                >
                   {DAY_ABBREV[day]}
                 </Text>
-                {isToday && <View style={[styles.todayDot, { backgroundColor: isSelected ? "#fff" : Colors.primary }]} />}
+                {isToday && (
+                  <View
+                    style={[
+                      styles.todayDot,
+                      { backgroundColor: isSelected ? "#fff" : Colors.primary },
+                    ]}
+                  />
+                )}
               </Pressable>
             );
           })}
@@ -163,7 +208,7 @@ export default function TimetableScreen() {
 
       <View style={styles.dayContent}>
         <Text style={styles.dayTitle}>{DAYS[selectedDay]}</Text>
-        <DayView day={DAYS[selectedDay]} />
+        <DayView day={DAYS[selectedDay]} bottomPad={bottomPad} />
       </View>
     </View>
   );
@@ -293,6 +338,7 @@ const styles = StyleSheet.create({
   dayMeta: {
     flexDirection: "row",
     gap: 12,
+    flexWrap: "wrap",
   },
   dayMetaItem: {
     flexDirection: "row",
@@ -319,33 +365,5 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins_500Medium",
     fontSize: 12,
     color: Colors.gold,
-  },
-  emptyCell: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emptyCellText: {
-    fontFamily: "Poppins_400Regular",
-    fontSize: 16,
-    color: Colors.border,
-  },
-  lectureCell: {
-    flex: 1,
-    padding: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    minHeight: 52,
-    justifyContent: "center",
-  },
-  cellCode: {
-    fontFamily: "Poppins_700Bold",
-    fontSize: 11,
-  },
-  cellTeacher: {
-    fontFamily: "Poppins_400Regular",
-    fontSize: 10,
-    color: Colors.textMuted,
-    marginTop: 2,
   },
 });
