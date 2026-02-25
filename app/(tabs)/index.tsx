@@ -1,10 +1,9 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
   ScrollView,
   StyleSheet,
-  Pressable,
   Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -20,7 +19,7 @@ import Animated, {
   FadeInDown,
 } from "react-native-reanimated";
 import { Colors } from "@/constants/colors";
-import { useTimetable, DAYS, TIME_SLOTS, Lecture } from "@/context/TimetableContext";
+import { useTimetable, TIME_SLOTS, Lecture } from "@/context/TimetableContext";
 
 function timeToMinutes(time: string) {
   const [h, m] = time.split(":").map(Number);
@@ -41,24 +40,48 @@ function formatTime(t: string) {
   return `${hour}:${m.toString().padStart(2, "0")} ${ampm}`;
 }
 
+function formatCurrentTime(date: Date) {
+  const h = date.getHours();
+  const m = date.getMinutes();
+  const ampm = h >= 12 ? "PM" : "AM";
+  const hour = h > 12 ? h - 12 : h === 0 ? 12 : h;
+  return `${hour}:${m.toString().padStart(2, "0")} ${ampm}`;
+}
+
+function formatDate(date: Date) {
+  const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+}
+
 function LiveDot() {
   const opacity = useSharedValue(1);
+
   useEffect(() => {
     opacity.value = withRepeat(
-      withSequence(withTiming(0.2, { duration: 800 }), withTiming(1, { duration: 800 })),
+      withSequence(
+        withTiming(0.2, { duration: 800 }),
+        withTiming(1, { duration: 800 })
+      ),
       -1
     );
   }, []);
+
   const animStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
-  return (
-    <Animated.View style={[styles.liveDot, animStyle]} />
-  );
+
+  return <Animated.View style={[styles.liveDot, animStyle]} />;
 }
 
 function ProgressBar({ percent, color }: { percent: number; color: string }) {
+  const clampedPct = Math.max(0, Math.min(100, percent));
   return (
     <View style={styles.progressTrack}>
-      <View style={[styles.progressFill, { width: `${percent}%` as any, backgroundColor: color }]} />
+      <View
+        style={[
+          styles.progressFill,
+          { width: `${clampedPct}%` as any, backgroundColor: color },
+        ]}
+      />
     </View>
   );
 }
@@ -71,22 +94,50 @@ interface LectureCardProps {
   delay?: number;
 }
 
-function LectureCard({ lecture, label, isOngoing, nowMinutes, delay = 0 }: LectureCardProps) {
-  const subjectColor = Colors.subjectColors[lecture.colorIndex % Colors.subjectColors.length];
-  const progress = isOngoing ? getProgressPercent(lecture.startTime, lecture.endTime, nowMinutes) : 0;
+function LectureCard({
+  lecture,
+  label,
+  isOngoing,
+  nowMinutes,
+  delay = 0,
+}: LectureCardProps) {
+  const colorIndex = lecture.colorIndex ?? 0;
+  const subjectColor =
+    Colors.subjectColors[colorIndex % Colors.subjectColors.length];
+  const progress = isOngoing
+    ? getProgressPercent(lecture.startTime, lecture.endTime, nowMinutes)
+    : 0;
 
   return (
     <Animated.View entering={FadeInDown.delay(delay).springify()}>
       <LinearGradient
-        colors={isOngoing ? [Colors.cardBg, Colors.backgroundLight] : [Colors.backgroundMid, Colors.backgroundMid]}
+        colors={
+          isOngoing
+            ? [Colors.cardBg, Colors.backgroundLight]
+            : [Colors.backgroundMid, Colors.backgroundMid]
+        }
         style={[styles.lectureCard, isOngoing && styles.lectureCardOngoing]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
         <View style={styles.cardHeader}>
-          <View style={[styles.labelPill, { backgroundColor: isOngoing ? subjectColor + "33" : Colors.backgroundLight }]}>
+          <View
+            style={[
+              styles.labelPill,
+              {
+                backgroundColor: isOngoing
+                  ? subjectColor + "33"
+                  : Colors.backgroundLight,
+              },
+            ]}
+          >
             {isOngoing && <LiveDot />}
-            <Text style={[styles.labelText, { color: isOngoing ? subjectColor : Colors.textMuted }]}>
+            <Text
+              style={[
+                styles.labelText,
+                { color: isOngoing ? subjectColor : Colors.textMuted },
+              ]}
+            >
               {label}
             </Text>
           </View>
@@ -99,20 +150,30 @@ function LectureCard({ lecture, label, isOngoing, nowMinutes, delay = 0 }: Lectu
           <View style={[styles.colorBar, { backgroundColor: subjectColor }]} />
           <View style={styles.cardInfo}>
             <Text style={styles.subjectCode}>{lecture.subjectCode}</Text>
-            <Text style={styles.subjectName} numberOfLines={1}>{lecture.subject}</Text>
+            <Text style={styles.subjectName} numberOfLines={1}>
+              {lecture.subject}
+            </Text>
             <View style={styles.cardMeta}>
-              {lecture.teacher ? (
+              {!!lecture.teacher && (
                 <View style={styles.metaChip}>
-                  <Ionicons name="person-outline" size={11} color={Colors.textMuted} />
+                  <Ionicons
+                    name="person-outline"
+                    size={11}
+                    color={Colors.textMuted}
+                  />
                   <Text style={styles.metaText}>{lecture.teacher}</Text>
                 </View>
-              ) : null}
-              {lecture.venue ? (
+              )}
+              {!!lecture.venue && (
                 <View style={styles.metaChip}>
-                  <Ionicons name="location-outline" size={11} color={Colors.textMuted} />
+                  <Ionicons
+                    name="location-outline"
+                    size={11}
+                    color={Colors.textMuted}
+                  />
                   <Text style={styles.metaText}>{lecture.venue}</Text>
                 </View>
-              ) : null}
+              )}
             </View>
           </View>
         </View>
@@ -130,7 +191,11 @@ function LectureCard({ lecture, label, isOngoing, nowMinutes, delay = 0 }: Lectu
   );
 }
 
-function TodayLectureRow({ slot, lecture, nowMinutes }: {
+function TodayLectureRow({
+  slot,
+  lecture,
+  nowMinutes,
+}: {
   slot: (typeof TIME_SLOTS)[0];
   lecture: Lecture | null;
   nowMinutes: number;
@@ -138,38 +203,72 @@ function TodayLectureRow({ slot, lecture, nowMinutes }: {
   if (slot.period === -1) {
     return (
       <View style={styles.lunchRow}>
-        <Ionicons name="restaurant-outline" size={14} color={Colors.gold} />
-        <Text style={[styles.lunchText, { color: Colors.gold }]}>Lunch Break  {formatTime("13:20")} – {formatTime("14:00")}</Text>
+        <Ionicons name="restaurant-outline" size={13} color={Colors.gold} />
+        <Text style={styles.lunchText}>
+          Lunch  {formatTime("13:20")} – {formatTime("14:00")}
+        </Text>
       </View>
     );
   }
 
   const isPast = nowMinutes > timeToMinutes(slot.end);
-  const isNow = nowMinutes >= timeToMinutes(slot.start) && nowMinutes < timeToMinutes(slot.end);
-  const color = lecture ? Colors.subjectColors[lecture.colorIndex % Colors.subjectColors.length] : Colors.border;
+  const isNow =
+    nowMinutes >= timeToMinutes(slot.start) &&
+    nowMinutes < timeToMinutes(slot.end);
+  const colorIndex = lecture?.colorIndex ?? 0;
+  const color = lecture
+    ? Colors.subjectColors[colorIndex % Colors.subjectColors.length]
+    : Colors.border;
 
   return (
     <View style={[styles.todayRow, isPast && styles.todayRowPast]}>
       <View style={styles.todayTimeCol}>
-        <Text style={[styles.todayPeriod, { color: isNow ? color : Colors.textMuted }]}>P{slot.period}</Text>
-        <Text style={[styles.todayTime, { color: isNow ? Colors.textPrimary : Colors.textMuted, opacity: isPast ? 0.5 : 1 }]}>
+        <Text style={[styles.todayPeriod, { color: isNow ? color : Colors.textMuted }]}>
+          P{slot.period}
+        </Text>
+        <Text style={[styles.todayTime, { color: Colors.textMuted }]}>
           {formatTime(slot.start)}
         </Text>
       </View>
-      <View style={[styles.todayDot, { backgroundColor: isNow ? color : isPast ? Colors.border : Colors.backgroundLight, borderColor: color }]} />
-      <View style={[styles.todayLine, { backgroundColor: isPast ? Colors.border : Colors.backgroundLight }]} />
+
+      <View
+        style={[
+          styles.todayDotCol,
+          { borderColor: color, backgroundColor: isNow ? color : Colors.backgroundLight },
+        ]}
+      />
+
       {lecture ? (
-        <View style={[styles.todaySubjectCard, { borderLeftColor: color, opacity: isPast ? 0.5 : 1, backgroundColor: isNow ? color + "20" : Colors.backgroundMid }]}>
-          <Text style={[styles.todaySubjectCode, { color: isNow ? color : Colors.textPrimary }]}>{lecture.subjectCode}</Text>
-          <Text style={[styles.todaySubjectName, { color: Colors.textMuted }]} numberOfLines={1}>{lecture.subject}</Text>
-          {lecture.venue ? (
-            <Text style={[styles.todayVenue, { color: Colors.textMuted }]}>{lecture.venue}</Text>
-          ) : null}
+        <View
+          style={[
+            styles.todaySubjectCard,
+            {
+              borderLeftColor: color,
+              backgroundColor: isNow ? color + "20" : Colors.backgroundMid,
+            },
+          ]}
+        >
+          <Text style={[styles.todaySubjectCode, { color: isNow ? color : Colors.textPrimary }]}>
+            {lecture.subjectCode}
+          </Text>
+          <Text style={styles.todaySubjectName} numberOfLines={1}>
+            {lecture.subject}
+          </Text>
+          {!!lecture.venue && (
+            <Text style={styles.todayVenue}>{lecture.venue}</Text>
+          )}
         </View>
       ) : (
-        <View style={[styles.todaySubjectCard, { borderLeftColor: Colors.border, backgroundColor: Colors.backgroundMid, opacity: 0.4 }]}>
-          <Text style={[styles.todaySubjectCode, { color: Colors.textMuted }]}>—</Text>
-          <Text style={[styles.todaySubjectName, { color: Colors.textMuted }]}>Free Period</Text>
+        <View
+          style={[
+            styles.todaySubjectCard,
+            { borderLeftColor: Colors.border, backgroundColor: Colors.backgroundMid, opacity: 0.4 },
+          ]}
+        >
+          <Text style={[styles.todaySubjectCode, { color: Colors.textMuted }]}>
+            —
+          </Text>
+          <Text style={styles.todaySubjectName}>Free Period</Text>
         </View>
       )}
     </View>
@@ -190,11 +289,8 @@ export default function HomeScreen() {
   const { current, next, todayDay } = getCurrentAndNextLecture();
   const todayLectures = getTodayLectures();
 
-  const dayOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][now.getDay()];
-  const dateStr = now.toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" });
-  const timeStr = now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
-
-  const isSunday = dayOfWeek === "Sunday";
+  const dayName = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][now.getDay()];
+  const isSunday = dayName === "Sunday";
 
   const webTopPad = Platform.OS === "web" ? 67 : 0;
   const webBottomPad = Platform.OS === "web" ? 34 : 0;
@@ -212,19 +308,24 @@ export default function HomeScreen() {
         <Animated.View entering={FadeIn.duration(500)} style={styles.header}>
           <View>
             <Text style={styles.greeting}>CSEVID</Text>
-            <Text style={styles.dateText}>{dayOfWeek}, {dateStr}</Text>
+            <Text style={styles.dateText}>{formatDate(now)}</Text>
           </View>
           <View style={styles.clockBadge}>
             <Ionicons name="time-outline" size={14} color={Colors.primary} />
-            <Text style={styles.clockText}>{timeStr}</Text>
+            <Text style={styles.clockText}>{formatCurrentTime(now)}</Text>
           </View>
         </Animated.View>
 
         {isSunday ? (
-          <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.sundayCard}>
+          <Animated.View
+            entering={FadeInDown.delay(100).springify()}
+            style={styles.sundayCard}
+          >
             <Ionicons name="sunny-outline" size={40} color={Colors.gold} />
             <Text style={styles.sundayTitle}>Enjoy your Sunday!</Text>
-            <Text style={styles.sundaySubtitle}>No classes today. Rest up for the week ahead.</Text>
+            <Text style={styles.sundaySubtitle}>
+              No classes today. Rest up for the week ahead.
+            </Text>
           </Animated.View>
         ) : (
           <>
@@ -247,10 +348,19 @@ export default function HomeScreen() {
               />
             )}
             {!current && !next && (
-              <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.noClassCard}>
-                <Ionicons name="checkmark-circle-outline" size={36} color={Colors.success} />
+              <Animated.View
+                entering={FadeInDown.delay(100).springify()}
+                style={styles.noClassCard}
+              >
+                <Ionicons
+                  name="checkmark-circle-outline"
+                  size={36}
+                  color={Colors.success}
+                />
                 <Text style={styles.noClassTitle}>All done for today!</Text>
-                <Text style={styles.noClassSub}>No more lectures remaining.</Text>
+                <Text style={styles.noClassSub}>
+                  No more lectures remaining.
+                </Text>
               </Animated.View>
             )}
 
@@ -292,7 +402,7 @@ const styles = StyleSheet.create({
   },
   dateText: {
     fontFamily: "Poppins_400Regular",
-    fontSize: 13,
+    fontSize: 12,
     color: Colors.textMuted,
     marginTop: 2,
   },
@@ -455,21 +565,20 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins_600SemiBold",
     fontSize: 17,
     color: Colors.textPrimary,
-    marginBottom: 16,
+    marginBottom: 12,
     marginTop: 8,
   },
   todaySchedule: {
-    gap: 4,
+    gap: 6,
   },
   todayRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    minHeight: 64,
-    position: "relative",
+    minHeight: 60,
   },
   todayRowPast: {
-    opacity: 0.6,
+    opacity: 0.45,
   },
   todayTimeCol: {
     width: 46,
@@ -483,44 +592,38 @@ const styles = StyleSheet.create({
   },
   todayTime: {
     fontFamily: "Poppins_400Regular",
-    fontSize: 10,
+    fontSize: 9,
     marginTop: 2,
     textAlign: "center",
   },
-  todayDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+  todayDotCol: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     borderWidth: 2,
-    zIndex: 1,
-  },
-  todayLine: {
-    position: "absolute",
-    left: 60,
-    top: "50%",
-    width: 2,
-    height: "100%",
-    zIndex: 0,
   },
   todaySubjectCard: {
     flex: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderRadius: 12,
     borderLeftWidth: 3,
   },
   todaySubjectCode: {
     fontFamily: "Poppins_700Bold",
     fontSize: 13,
+    color: Colors.textPrimary,
   },
   todaySubjectName: {
     fontFamily: "Poppins_400Regular",
     fontSize: 11,
+    color: Colors.textMuted,
     marginTop: 1,
   },
   todayVenue: {
     fontFamily: "Poppins_400Regular",
     fontSize: 10,
+    color: Colors.textMuted,
     marginTop: 2,
   },
   lunchRow: {
@@ -532,12 +635,12 @@ const styles = StyleSheet.create({
     marginLeft: 56,
     backgroundColor: Colors.gold + "15",
     borderRadius: 10,
-    marginVertical: 4,
     borderWidth: 1,
     borderColor: Colors.gold + "30",
   },
   lunchText: {
     fontFamily: "Poppins_500Medium",
     fontSize: 12,
+    color: Colors.gold,
   },
 });
