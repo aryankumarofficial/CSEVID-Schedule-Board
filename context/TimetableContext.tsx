@@ -591,13 +591,14 @@ export function TimetableProvider({ children }: { children: ReactNode }) {
     }
 
     if (!next && !current) {
-      for (const day of DAYS) {
-        if (day === dayName) continue;
+      const todayIdx = DAYS.indexOf(dayName);
+      for (let i = 1; i <= DAYS.length; i++) {
+        const day = DAYS[(todayIdx + i) % DAYS.length];
         const schedule = timetable[day];
         if (!schedule) continue;
         for (const slot of slots) {
           const lecture = schedule[slot.period];
-          if (lecture && !next) {
+          if (lecture) {
             next = { ...lecture, day };
             break;
           }
