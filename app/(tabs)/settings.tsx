@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from "react";
+import ScanModal from "@/components/ScanModal";
 import {
   View,
   Text,
@@ -305,6 +306,7 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { resetToDefault } = useTimetable();
   const [selectedDay, setSelectedDay] = useState(DAYS[0]);
+  const [scanVisible, setScanVisible] = useState(false);
 
   const webTopPad = Platform.OS === "web" ? 67 : 0;
   const webBottomPad = Platform.OS === "web" ? 34 : 0;
@@ -334,10 +336,16 @@ export default function SettingsScreen() {
           <Text style={styles.screenTitle}>Manage</Text>
           <Text style={styles.screenSubtitle}>Edit your timetable</Text>
         </View>
-        <Pressable onPress={handleReset} style={styles.resetBtn} hitSlop={8}>
-          <Ionicons name="refresh-outline" size={16} color={Colors.danger} />
-          <Text style={styles.resetBtnText}>Reset</Text>
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable onPress={() => setScanVisible(true)} style={styles.scanBtn} hitSlop={8}>
+            <Ionicons name="scan-outline" size={16} color={Colors.primary} />
+            <Text style={styles.scanBtnText}>Scan</Text>
+          </Pressable>
+          <Pressable onPress={handleReset} style={styles.resetBtn} hitSlop={8}>
+            <Ionicons name="refresh-outline" size={16} color={Colors.danger} />
+            <Text style={styles.resetBtnText}>Reset</Text>
+          </Pressable>
+        </View>
       </Animated.View>
 
       <Animated.View entering={FadeInDown.delay(100).duration(400)}>
@@ -388,6 +396,8 @@ export default function SettingsScreen() {
           </Text>
         </Animated.View>
       </ScrollView>
+
+      <ScanModal visible={scanVisible} onClose={() => setScanVisible(false)} />
     </View>
   );
 }
@@ -415,6 +425,27 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.textMuted,
     marginTop: 2,
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  scanBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: Colors.primary + "20",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Colors.primary + "40",
+  },
+  scanBtnText: {
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 13,
+    color: Colors.primary,
   },
   resetBtn: {
     flexDirection: "row",
